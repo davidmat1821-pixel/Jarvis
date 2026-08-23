@@ -8,7 +8,7 @@
         body {
             background-color: #050508;
             color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             display: flex;
             flex-direction: column;
             justify-content: space-around;
@@ -20,14 +20,15 @@
         #clock {
             font-size: 4rem;
             font-weight: 300;
-            letter-spacing: 2px;
             color: #00d2ff;
             text-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+            text-align: center;
         }
         #date {
             font-size: 1.2rem;
             color: #8a99ad;
-            margin-top: -30px;
+            text-align: center;
+            margin-top: 10px;
         }
         .orb {
             width: 150px;
@@ -37,15 +38,22 @@
             box-shadow: 0 0 50px #00d2ff;
             animation: pulse 3s infinite ease-in-out;
             cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .recording {
+            background: radial-gradient(circle, #ff416c 0%, #ff4b2b 70%, transparent 100%);
+            box-shadow: 0 0 50px #ff416c;
+            animation: pulse 1s infinite ease-in-out;
         }
         @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 30px #00d2ff; }
-            50% { transform: scale(1.08); box-shadow: 0 0 70px #00d2ff; }
-            100% { transform: scale(0.95); box-shadow: 0 0 30px #00d2ff; }
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(0.95); }
         }
         #status {
-            font-size: 1rem;
-            color: #556b82;
+            font-size: 1.1rem;
+            color: #8a99ad;
+            text-align: center;
         }
     </style>
 </head>
@@ -53,7 +61,88 @@
 
     <div>
         <div id="clock">00:00</div>
-        <div id="date">Cargando fecha...</div>
+        <div id="date">Cargando...</div>
     </div>
 
-    <div class="orb" onclick="alert('Tocaste a Jarvis')"></div>
+    <div id="orb" class="orb" onclick="toggleRecording()"></div>
+
+    <div id="status">Toca la esfera para hablar</div>
+
+    <audio id="audioPlayer" style="display:none;"></audio>
+
+    <script>
+        const MAKE_WEBHOOK_URL = https://hook.us2.make.com/fxk2ibpvmut811i2fcg4yb56saasskfc; 
+
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clock').textContent = ${hours}:${minutes};
+            
+            const options = { weekday: 'long', month: 'long', day: 'numeric' };
+            document.getElementById('date').textContent = now.toLocaleDateString('es-ES', options);
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        async function toggleRecording() {
+            const orb = document.getElementById('orb');
+            const status = document.getElementById('status');
+
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                    
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                        status.textContent = "Procesando respuesta...";
+                        
+                        const formData = new FormData();
+                        formData.append("file", audioBlob, "voice.mp3");
+
+                        try {
+                            const response = await fetch(MAKE_WEBHOOK_URL, {
+                                method: "POST",
+                                body: formData
+                            });
+                            
+                            if(response.ok) {
+                                const audioResponse = await response.blob();
+                                const audioUrl = URL.createObjectURL(audioResponse);
+                                const player = document.getElementById('audioPlayer');
+                                player.src = audioUrl;
+                                player.play();
+                                status.textContent = "Jarvis respondiendo...";
+                                player.onended = () => status.textContent = "Toca la esfera para hablar";
+                            } else {
+                                status.textContent = "Error al recibir respuesta";
+                            }
+                        } catch (e) {
+                            status.textContent = "Error de conexión";
+                        }
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    orb.classList.add('recording');
+                    status.textContent = "Escuchando... (Toca de nuevo para enviar)";
+                } catch (err) {
+                    alert("Por favor permite el acceso al micrófono");
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                orb.classList.remove('recording');
+            }
+        }
+    </script>
+</body>
+</html>
