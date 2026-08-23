@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jarvis IA</title>
+    <title>Mara IA</title>
     <style>
         body {
             background-color: #050508;
             color: #ffffff;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             justify-content: space-around;
@@ -16,6 +16,7 @@
             height: 100vh;
             margin: 0;
             overflow: hidden;
+            user-select: none;
         }
         #clock {
             font-size: 4rem;
@@ -29,10 +30,11 @@
             color: #8a99ad;
             text-align: center;
             margin-top: 10px;
+            text-transform: capitalize;
         }
         .orb {
-            width: 150px;
-            height: 150px;
+            width: 160px;
+            height: 160px;
             border-radius: 50%;
             background: radial-gradient(circle, #00d2ff 0%, #3a7bd5 70%, transparent 100%);
             box-shadow: 0 0 50px #00d2ff;
@@ -40,20 +42,42 @@
             cursor: pointer;
             transition: all 0.3s ease;
         }
+        /* Estado cuando Mara está escuchando */
         .recording {
-            background: radial-gradient(circle, #ff416c 0%, #ff4b2b 70%, transparent 100%);
-            box-shadow: 0 0 50px #ff416c;
-            animation: pulse 1s infinite ease-in-out;
+            background: radial-gradient(circle, #ff0055 0%, #ff4b2b 70%, transparent 100%) !important;
+            box-shadow: 0 0 60px #ff0055 !important;
+            animation: pulse-fast 0.8s infinite ease-in-out !important;
+        }
+        /* Estado cuando Mara está pensando (se deja de mover) */
+        .thinking {
+            background: radial-gradient(circle, #a855f7 0%, #6b21a8 70%, transparent 100%) !important;
+            box-shadow: 0 0 40px #a855f7 !important;
+            animation: none !important;
+            transform: scale(1) !important;
         }
         @keyframes pulse {
             0% { transform: scale(0.95); }
-            50% { transform: scale(1.08); }
+            50% { transform: scale(1.05); }
             100% { transform: scale(0.95); }
         }
+        @keyframes pulse-fast {
+            0% { transform: scale(0.92); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(0.92); }
+        }
         #status {
-            font-size: 1.1rem;
-            color: #8a99ad;
+            font-size: 1.2rem;
+            color: #a0aec0;
             text-align: center;
+            min-height: 1.5em;
+        }
+        #response-text {
+            font-size: 1.1rem;
+            color: #e2e8f0;
+            text-align: center;
+            max-width: 80%;
+            margin-top: 10px;
+            min-height: 2em;
         }
     </style>
 </head>
@@ -61,23 +85,27 @@
 
     <div>
         <div id="clock">00:00</div>
-        <div id="date">Cargando...</div>
+        <div id="date">Cargando fecha...</div>
     </div>
 
-    <div id="orb" class="orb" onclick="toggleRecording()"></div>
+    <div id="orb" class="orb" onclick="handleOrbClick()"></div>
 
-    <div id="status">Toca la esfera para hablar</div>
+    <div style="text-align: center;">
+        <div id="status">Toca la esfera para hablar con Mara</div>
+        <div id="response-text"></div>
+    </div>
 
     <audio id="audioPlayer" style="display:none;"></audio>
 
     <script>
-        const MAKE_WEBHOOK_URL = https://hook.us2.make.com/fxk2ibpvmut811i2fcg4yb56saasskfc; 
+        // PEGA AQUÍ LA URL DE TU CUSTOM WEBHOOK DE MAKE
+        const MAKE_WEBHOOK_URL = https:"//hook.us2.make.com/fxk2ibpvmut811i2fcg4yb56saasskfc"; 
 
         function updateClock() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('clock').textContent = ${hours}:${minutes};
+            document.getElementById('clock').textContent = `${hours}:${minutes}`;
             
             const options = { weekday: 'long', month: 'long', day: 'numeric' };
             document.getElementById('date').textContent = now.toLocaleDateString('es-ES', options);
@@ -89,24 +117,31 @@
         let audioChunks = [];
         let isRecording = false;
 
-        async function toggleRecording() {
+        async function handleOrbClick() {
             const orb = document.getElementById('orb');
             const status = document.getElementById('status');
+            const responseText = document.getElementById('response-text');
 
             if (!isRecording) {
                 try {
+                    // Solicitar acceso al micrófono
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(stream);
                     audioChunks = [];
 
-                    mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-                    
+                    mediaRecorder.ondataavailable = event => {
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                        }
+                    };
+
                     mediaRecorder.onstop = async () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
-                        status.textContent = "Procesando respuesta...";
+                        orb.className = "orb thinking";
+                        status.textContent = "Mara está pensando...";
                         
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                         const formData = new FormData();
-                        formData.append("file", audioBlob, "voice.mp3");
+                        formData.append("file", audioBlob, "audio.webm");
 
                         try {
                             const response = await fetch(MAKE_WEBHOOK_URL, {
@@ -114,33 +149,36 @@
                                 body: formData
                             });
                             
-                            if(response.ok) {
-                                const audioResponse = await response.blob();
-                                const audioUrl = URL.createObjectURL(audioResponse);
-                                const player = document.getElementById('audioPlayer');
-                                player.src = audioUrl;
-                                player.play();
-                                status.textContent = "Jarvis respondiendo...";
-                                player.onended = () => status.textContent = "Toca la esfera para hablar";
+                            if (response.ok) {
+                                const resultText = await response.text();
+                                status.textContent = "Mara dice:";
+                                responseText.textContent = resultText;
                             } else {
-                                status.textContent = "Error al recibir respuesta";
+                                status.textContent = "Error al recibir respuesta de Make";
                             }
                         } catch (e) {
-                            status.textContent = "Error de conexión";
+                            status.textContent = "Error de conexión con Make";
+                        } finally {
+                            orb.className = "orb";
                         }
                     };
 
                     mediaRecorder.start();
                     isRecording = true;
-                    orb.classList.add('recording');
+                    orb.className = "orb recording";
                     status.textContent = "Escuchando... (Toca de nuevo para enviar)";
+                    responseText.textContent = "";
+
                 } catch (err) {
-                    alert("Por favor permite el acceso al micrófono");
+                    alert("Error: Por favor otorga permisos de micrófono en el navegador de tu tableta.");
+                    console.error(err);
                 }
             } else {
+                // Detener grabación
                 mediaRecorder.stop();
                 isRecording = false;
-                orb.classList.remove('recording');
+                // Detener los tracks del micrófono
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
             }
         }
     </script>
