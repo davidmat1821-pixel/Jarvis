@@ -42,13 +42,11 @@
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        /* Estado cuando Mara está escuchando */
         .recording {
             background: radial-gradient(circle, #ff0055 0%, #ff4b2b 70%, transparent 100%) !important;
             box-shadow: 0 0 60px #ff0055 !important;
             animation: pulse-fast 0.8s infinite ease-in-out !important;
         }
-        /* Estado cuando Mara está pensando (se deja de mover) */
         .thinking {
             background: radial-gradient(circle, #a855f7 0%, #6b21a8 70%, transparent 100%) !important;
             box-shadow: 0 0 40px #a855f7 !important;
@@ -95,11 +93,8 @@
         <div id="response-text"></div>
     </div>
 
-    <audio id="audioPlayer" style="display:none;"></audio>
-
     <script>
-        // PEGA AQUÍ LA URL DE TU CUSTOM WEBHOOK DE MAKE
-        const MAKE_WEBHOOK_URL = https:"//hook.us2.make.com/fxk2ibpvmut811i2fcg4yb56saasskfc"; 
+        const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/fxk2ibpvmut811i2fcg4yb56saasskfc"; 
 
         function updateClock() {
             const now = new Date();
@@ -124,7 +119,6 @@
 
             if (!isRecording) {
                 try {
-                    // Solicitar acceso al micrófono
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(stream);
                     audioChunks = [];
@@ -170,14 +164,12 @@
                     responseText.textContent = "";
 
                 } catch (err) {
-                    alert("Error: Por favor otorga permisos de micrófono en el navegador de tu tableta.");
+                    alert("Error al acceder al micrófono. Si estás abriendo el archivo localmente, ejecuta la aplicación mediante un servidor local como Live Server.");
                     console.error(err);
                 }
             } else {
-                // Detener grabación
                 mediaRecorder.stop();
                 isRecording = false;
-                // Detener los tracks del micrófono
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
             }
         }
