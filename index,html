@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis IA</title>
+    <style>
+        body {
+            background-color: #050508;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        #clock {
+            font-size: 4rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: #00d2ff;
+            text-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+        }
+        #date {
+            font-size: 1.2rem;
+            color: #8a99ad;
+            margin-top: -30px;
+        }
+        .orb {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00d2ff 0%, #3a7bd5 70%, transparent 100%);
+            box-shadow: 0 0 50px #00d2ff;
+            animation: pulse 3s infinite ease-in-out;
+            cursor: pointer;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 30px #00d2ff; }
+            50% { transform: scale(1.08); box-shadow: 0 0 70px #00d2ff; }
+            100% { transform: scale(0.95); box-shadow: 0 0 30px #00d2ff; }
+        }
+        #status {
+            font-size: 1rem;
+            color: #556b82;
+        }
+    </style>
+</head>
+<body>
+
+    <div>
+        <div id="clock">00:00</div>
+        <div id="date">Cargando fecha...</div>
+    </div>
+
+    <div class="orb" onclick="alert('Tocaste a Jarvis')"></div>
