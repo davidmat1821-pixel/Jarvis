@@ -129,25 +129,30 @@
             mainRecognizer.onresult = (event) => {
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     const transcript = event.results[i][0].transcript.toLowerCase().trim();
-                    console.log("Texto detectado:", transcript);
+                    console.log("Texto escuchado:", transcript);
 
-                    // ESTADO 1: Esperando palabra de inicio
+                    // ESTADO 1: Esperando la activación por voz
                     if (!isRecording) {
                         if (transcript.includes("mara") || transcript.includes("oye mara")) {
-                            console.log("¡Activado por voz!");
+                            console.log("¡Activado!");
                             startAudioRecording();
                             break;
                         }
                     } 
-                    // ESTADO 2: Grabando consulta y esperando "Please / Pless"
+                    // ESTADO 2: Grabando y buscando SOLAMENTE variaciones fonéticas en inglés de "Please"
                     else {
-                        if (
-                            transcript.includes("please") || 
-                            transcript.includes("pless") || 
-                            transcript.includes("ples") || 
-                            transcript.includes("por favor")
-                        ) {
-                            console.log("¡Comando de finalización detectado!");
+                        // Se eliminó "por favor". Solo acepta el sonido en inglés.
+                        const EnglishStop = (
+                            transcript.endsWith("please") || 
+                            transcript.endsWith("pless") || 
+                            transcript.endsWith("ples") || 
+                            transcript.endsWith("pleas") ||
+                            transcript.includes(" please ") ||
+                            transcript.includes(" pless ")
+                        );
+
+                        if (EnglishStop) {
+                            console.log("¡Cierre por 'Please' detectado!");
                             stopAudioRecording();
                             break;
                         }
@@ -180,7 +185,7 @@
             responseText.textContent = "";
 
             try {
-                // Filtros de audio para aislar tu voz del sonido ambiente
+                // Filtros de micrófono activos
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         echoCancellation: true,
@@ -242,7 +247,6 @@
             }
         }
 
-        // Primer clic para activar permisos en el navegador
         window.addEventListener('load', () => {
             document.body.addEventListener('click', function unlockAudio() {
                 initMaraVoiceEngine();
