@@ -36,7 +36,6 @@
             width: 160px;
             height: 160px;
             border-radius: 50%;
-            /* Centro mucho más brillante con blanco intenso (#ffffff) */
             background: radial-gradient(circle, #ffffff 0%, #00d2ff 35%, #3a7bd5 75%, transparent 100%);
             box-shadow: 0 0 60px #00d2ff, inset 0 0 15px #ffffff;
             animation: pulse 3s infinite ease-in-out;
@@ -114,10 +113,9 @@
         let isRecording = false;
         let mainRecognizer;
 
-        // Función para leer la respuesta usando la voz nativa del navegador
         function speakText(text) {
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); // Detener audios anteriores
+                window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'es-ES';
                 utterance.rate = 1.0;
@@ -214,9 +212,9 @@
                     orb.className = "orb thinking";
                     status.textContent = "Mara está pensando...";
 
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                     const formData = new FormData();
-                    formData.append("file", audioBlob, "audio.webm");
+                    formData.append("file", audioBlob, "audio.wav");
 
                     try {
                         const response = await fetch(MAKE_WEBHOOK_URL, {
@@ -225,19 +223,25 @@
                         });
 
                         if (response.ok) {
-                            const data = await response.json();
-                            const answerText = data.text || "No recibí respuesta.";
+                            const rawText = await response.text();
+                            let answerText = "";
+                            
+                            try {
+                                const parsed = JSON.parse(rawText);
+                                answerText = parsed.text || rawText;
+                            } catch(err) {
+                                answerText = rawText;
+                            }
 
                             status.textContent = "Mara respondiendo...";
                             responseText.textContent = answerText;
-
-                            // Hablar la respuesta recibida en JSON
                             speakText(answerText);
                         } else {
-                            status.textContent = "Error al recibir respuesta de Make.";
+                            status.textContent = `Error Make: Status ${response.status}`;
                         }
                     } catch (e) {
                         status.textContent = "Error de conexión con Make.";
+                        console.error(e);
                     } finally {
                         orb.className = "orb";
                         isRecording = false;
