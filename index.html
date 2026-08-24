@@ -111,54 +111,63 @@
         let mediaRecorder;
         let audioChunks = [];
         let isRecording = false;
-        let silenceTimer;
-        let audioContext;
-        let analyser;
-        let microphone;
+        let mainRecognizer;
 
-        function initWakeWord() {
+        function initMaraVoiceEngine() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             
             if (!SpeechRecognition) {
-                document.getElementById('status').textContent = "Tu navegador no soporta voz continua.";
+                document.getElementById('status').textContent = "Navegador no compatible con voz.";
                 return;
             }
 
-            const recognizer = new SpeechRecognition();
-            recognizer.continuous = true;
-            recognizer.interimResults = true;
-            recognizer.lang = 'es-ES';
+            mainRecognizer = new SpeechRecognition();
+            mainRecognizer.continuous = true;
+            mainRecognizer.interimResults = true;
+            mainRecognizer.lang = 'es-ES';
 
-            recognizer.onresult = (event) => {
-                if (isRecording) return;
-
+            mainRecognizer.onresult = (event) => {
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    const text = event.results[i][0].transcript.toLowerCase().trim();
-                    console.log("Escuchando:", text);
+                    const transcript = event.results[i][0].transcript.toLowerCase().trim();
+                    console.log("Texto detectado:", transcript);
 
-                    if (text.includes("mara") || text.includes("oye mara")) {
-                        console.log("¡Palabra clave detectada!");
-                        startAutoRecording();
-                        break;
+                    // ESTADO 1: Esperando palabra de inicio
+                    if (!isRecording) {
+                        if (transcript.includes("mara") || transcript.includes("oye mara")) {
+                            console.log("¡Activado por voz!");
+                            startAudioRecording();
+                            break;
+                        }
+                    } 
+                    // ESTADO 2: Grabando consulta y esperando "Please / Pless"
+                    else {
+                        if (
+                            transcript.includes("please") || 
+                            transcript.includes("pless") || 
+                            transcript.includes("ples") || 
+                            transcript.includes("por favor")
+                        ) {
+                            console.log("¡Comando de finalización detectado!");
+                            stopAudioRecording();
+                            break;
+                        }
                     }
                 }
             };
 
-            recognizer.onend = () => {
-                if (!isRecording) {
-                    try { recognizer.start(); } catch(e) {}
-                }
+            mainRecognizer.onend = () => {
+                try { mainRecognizer.start(); } catch(e) {}
             };
 
             try {
-                recognizer.start();
-                document.getElementById('status').textContent = "Manos libres activo. Di 'Oye Mara' o 'Mara'";
+                mainRecognizer.start();
+                document.getElementById('status').textContent = "Di 'Mara' para hablar y 'Please' para enviar.";
             } catch(e) {
-                console.error("Error al iniciar escucha pasiva:", e);
+                console.error("Error al iniciar motor de voz:", e);
             }
         }
 
-        async function startAutoRecording() {
+        async function startAudioRecording() {
             if (isRecording) return;
             isRecording = true;
 
@@ -167,21 +176,21 @@
             const responseText = document.getElementById('response-text');
 
             orb.className = "orb recording";
-            status.textContent = "Te escucho... habla tu consulta";
+            status.textContent = "Te escucho... di 'Please' al terminar.";
             responseText.textContent = "";
 
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Filtros de audio para aislar tu voz del sonido ambiente
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
-
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                microphone = audioContext.createMediaStreamSource(stream);
-                microphone.connect(analyser);
-                analyser.fftSize = 256;
-                
-                detectSilence(stream);
 
                 mediaRecorder.ondataavailable = event => {
                     if (event.data.size > 0) audioChunks.push(event.data);
@@ -212,7 +221,7 @@
                         status.textContent = "Error de conexión con Make";
                     } finally {
                         orb.className = "orb";
-                        status.textContent = "Di 'Oye Mara' para otra consulta";
+                        status.textContent = "Di 'Mara' para hablar y 'Please' para enviar.";
                         isRecording = false;
                     }
                 };
@@ -226,51 +235,17 @@
             }
         }
 
-        function detectSilence(stream) {
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-            
-            function checkVolume() {
-                if (!isRecording) return;
-
-                analyser.getByteFrequencyData(dataArray);
-                let sum = 0;
-                for (let i = 0; i < bufferLength; i++) {
-                    sum += dataArray[i];
-                }
-                let average = sum / bufferLength;
-
-                if (average < 10) { 
-                    if (!silenceTimer) {
-                        silenceTimer = setTimeout(() => {
-                            stopAutoRecording(stream);
-                        }, 2000);
-                    }
-                } else {
-                    clearTimeout(silenceTimer);
-                    silenceTimer = null;
-                }
-
-                requestAnimationFrame(checkVolume);
-            }
-
-            checkVolume();
-        }
-
-        function stopAutoRecording(stream) {
+        function stopAudioRecording() {
             if (mediaRecorder && mediaRecorder.state !== "inactive") {
                 mediaRecorder.stop();
-                stream.getTracks().forEach(track => track.stop());
-                if (audioContext) audioContext.close();
-                clearTimeout(silenceTimer);
-                silenceTimer = null;
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
             }
         }
 
-        // Activación mediante un clic inicial para desbloquear el micrófono del navegador
+        // Primer clic para activar permisos en el navegador
         window.addEventListener('load', () => {
             document.body.addEventListener('click', function unlockAudio() {
-                initWakeWord();
+                initMaraVoiceEngine();
                 document.body.removeEventListener('click', unlockAudio);
             }, { once: true });
         });
