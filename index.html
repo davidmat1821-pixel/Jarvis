@@ -213,17 +213,19 @@
                         });
 
                         if (response.ok) {
-                            const data = await response.json();
+                            // Procesar la respuesta directamente como audio binario (audio/mpeg)
+                            const responseAudioBlob = await response.blob();
+                            const audioUrl = URL.createObjectURL(responseAudioBlob);
                             
-                            status.textContent = "Mara dice:";
-                            responseText.textContent = data.text;
+                            status.textContent = "Mara respondiendo...";
 
-                            // Reproducir la voz devuelta por Make
-                            if (data.audio) {
-                                const player = document.getElementById('audioPlayer');
-                                player.src = "data:audio/mp3;base64," + data.audio;
-                                player.play();
-                            }
+                            const player = document.getElementById('audioPlayer');
+                            player.src = audioUrl;
+                            player.play();
+
+                            player.onended = () => {
+                                status.textContent = "Di 'Mara' para hablar y 'Please' para enviar.";
+                            };
                         } else {
                             status.textContent = "Error al recibir respuesta de Make";
                         }
@@ -231,7 +233,6 @@
                         status.textContent = "Error de conexión con Make";
                     } finally {
                         orb.className = "orb";
-                        status.textContent = "Di 'Mara' para hablar y 'Please' para enviar.";
                         isRecording = false;
                     }
                 };
