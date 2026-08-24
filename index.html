@@ -1,132 +1,263 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Asistente Mara</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background-color: #f4f4f9;
-      margin: 0;
-    }
-    .container {
-      text-align: center;
-      background: white;
-      padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    button {
-      padding: 12px 24px;
-      font-size: 16px;
-      border: none;
-      border-radius: 25px;
-      background-color: #007bff;
-      color: white;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    button.recording {
-      background-color: #dc3545;
-    }
-    #status {
-      margin-top: 15px;
-      font-weight: bold;
-      color: #555;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mara IA</title>
+    <style>
+        body {
+            background-color: #050508;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+        #clock {
+            font-size: 4rem;
+            font-weight: 300;
+            color: #00d2ff;
+            text-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+            text-align: center;
+        }
+        #date {
+            font-size: 1.2rem;
+            color: #8a99ad;
+            text-align: center;
+            margin-top: 10px;
+            text-transform: capitalize;
+        }
+        .orb {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00d2ff 0%, #3a7bd5 70%, transparent 100%);
+            box-shadow: 0 0 50px #00d2ff;
+            animation: pulse 3s infinite ease-in-out;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .recording {
+            background: radial-gradient(circle, #ff0055 0%, #ff4b2b 70%, transparent 100%) !important;
+            box-shadow: 0 0 60px #ff0055 !important;
+            animation: pulse-fast 0.8s infinite ease-in-out !important;
+        }
+        .thinking {
+            background: radial-gradient(circle, #a855f7 0%, #6b21a8 70%, transparent 100%) !important;
+            box-shadow: 0 0 40px #a855f7 !important;
+            animation: none !important;
+            transform: scale(1) !important;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(0.95); }
+        }
+        @keyframes pulse-fast {
+            0% { transform: scale(0.92); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(0.92); }
+        }
+        #status {
+            font-size: 1.2rem;
+            color: #a0aec0;
+            text-align: center;
+            min-height: 1.5em;
+        }
+        #response-text {
+            font-size: 1.1rem;
+            color: #e2e8f0;
+            text-align: center;
+            max-width: 80%;
+            margin-top: 10px;
+            min-height: 2em;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="container">
-    <h2>Asistente de Voz - Mara</h2>
-    <button id="micBtn">Hablar con Mara</button>
-    <div id="status">Presiona para hablar</div>
-  </div>
+    <div>
+        <div id="clock">00:00</div>
+        <div id="date">Cargando fecha...</div>
+    </div>
 
-  <script>
-    const WEBHOOK_URL = 'TU_WEBHOOK_URL_AQUI'; // Reemplaza por la URL de tu primer módulo Webhook en Make
+    <div id="orb" class="orb"></div>
 
-    const micBtn = document.getElementById('micBtn');
-    const statusText = document.getElementById('status');
+    <div style="text-align: center;">
+        <div id="status">Haz un clic inicial en la pantalla para activar...</div>
+        <div id="response-text"></div>
+    </div>
 
-    let mediaRecorder;
-    let audioChunks = [];
-    let isRecording = false;
+    <audio id="audioPlayer" style="display:none;"></audio>
 
-    micBtn.addEventListener('click', async () => {
-      if (!isRecording) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          mediaRecorder = new MediaRecorder(stream);
-          audioChunks = [];
+    <script>
+        const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/fxk2ibpvmut811i2fcg4yb56saasskfc"; 
 
-          mediaRecorder.ondataavailable = (event) => {
-            audioChunks.push(event.data);
-          };
-
-          mediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-            await enviarAudioAMara(audioBlob);
-          };
-
-          mediaRecorder.start();
-          isRecording = true;
-          micBtn.textContent = 'Detener grabación';
-          micBtn.classList.add('recording');
-          statusText.textContent = 'Escuchando...';
-        } catch (err) {
-          statusText.textContent = 'Error al acceder al micrófono.';
-          console.error(err);
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}`;
+            
+            const options = { weekday: 'long', month: 'long', day: 'numeric' };
+            document.getElementById('date').textContent = now.toLocaleDateString('es-ES', options);
         }
-      } else {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        isRecording = false;
-        micBtn.textContent = 'Hablar con Mara';
-        micBtn.classList.remove('recording');
-        statusText.textContent = 'Procesando respuesta...';
-      }
-    });
+        setInterval(updateClock, 1000);
+        updateClock();
 
-    async function enviarAudioAMara(blob) {
-      try {
-        const formData = new FormData();
-        formData.append('file', blob, 'audio.wav');
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let mainRecognizer;
 
-        const response = await fetch(WEBHOOK_URL, {
-          method: 'POST',
-          body: formData
+        function initMaraVoiceEngine() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                document.getElementById('status').textContent = "Navegador no compatible con voz.";
+                return;
+            }
+
+            mainRecognizer = new SpeechRecognition();
+            mainRecognizer.continuous = true;
+            mainRecognizer.interimResults = true;
+            mainRecognizer.lang = 'es-ES';
+
+            mainRecognizer.onresult = (event) => {
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcript = event.results[i][0].transcript.toLowerCase().trim();
+                    console.log("Texto escuchado:", transcript);
+
+                    if (!isRecording) {
+                        if (transcript.includes("mara") || transcript.includes("oye mara")) {
+                            console.log("¡Activado!");
+                            startAudioRecording();
+                            break;
+                        }
+                    } else {
+                        const EnglishStop = (
+                            transcript.endsWith("please") || 
+                            transcript.endsWith("pless") || 
+                            transcript.endsWith("ples") || 
+                            transcript.endsWith("pleas") ||
+                            transcript.includes(" please ") ||
+                            transcript.includes(" pless ")
+                        );
+
+                        if (EnglishStop) {
+                            console.log("¡Cierre detectado!");
+                            stopAudioRecording();
+                            break;
+                        }
+                    }
+                }
+            };
+
+            mainRecognizer.onend = () => {
+                try { mainRecognizer.start(); } catch(e) {}
+            };
+
+            try {
+                mainRecognizer.start();
+                document.getElementById('status').textContent = "Di 'Mara' para hablar y 'Please' para enviar.";
+            } catch(e) {
+                console.error("Error al iniciar motor de voz:", e);
+            }
+        }
+
+        async function startAudioRecording() {
+            if (isRecording) return;
+            isRecording = true;
+
+            const orb = document.getElementById('orb');
+            const status = document.getElementById('status');
+            const responseText = document.getElementById('response-text');
+
+            orb.className = "orb recording";
+            status.textContent = "Te escucho... di 'Please' al terminar.";
+            responseText.textContent = "";
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    orb.className = "orb thinking";
+                    status.textContent = "Mara está pensando...";
+
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const formData = new FormData();
+                    formData.append("file", audioBlob, "audio.webm");
+
+                    try {
+                        const response = await fetch(MAKE_WEBHOOK_URL, {
+                            method: "POST",
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            
+                            status.textContent = "Mara dice:";
+                            responseText.textContent = data.text;
+
+                            // Reproducir la voz devuelta por Make
+                            if (data.audio) {
+                                const player = document.getElementById('audioPlayer');
+                                player.src = "data:audio/mp3;base64," + data.audio;
+                                player.play();
+                            }
+                        } else {
+                            status.textContent = "Error al recibir respuesta de Make";
+                        }
+                    } catch (e) {
+                        status.textContent = "Error de conexión con Make";
+                    } finally {
+                        orb.className = "orb";
+                        status.textContent = "Di 'Mara' para hablar y 'Please' para enviar.";
+                        isRecording = false;
+                    }
+                };
+
+                mediaRecorder.start();
+
+            } catch (err) {
+                console.error("Error al acceder al micrófono:", err);
+                isRecording = false;
+                orb.className = "orb";
+            }
+        }
+
+        function stopAudioRecording() {
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        window.addEventListener('load', () => {
+            document.body.addEventListener('click', function unlockAudio() {
+                initMaraVoiceEngine();
+                document.body.removeEventListener('click', unlockAudio);
+            }, { once: true });
         });
-
-        if (!response.ok) {
-          throw new Error('Error en la comunicación con el servidor');
-        }
-
-        const audioResponse = await response.blob();
-        const audioUrl = URL.createObjectURL(audioResponse);
-        
-        statusText.textContent = 'Mara respondiendo...';
-        const player = new Audio(audioUrl);
-        
-        player.play();
-        player.onended = () => {
-          statusText.textContent = 'Presiona para hablar';
-        };
-      } catch (error) {
-        statusText.textContent = 'Error al recibir la voz de Mara.';
-        console.error(error);
-      }
-    }
-  </script>
-
+    </script>
 </body>
 </html>
