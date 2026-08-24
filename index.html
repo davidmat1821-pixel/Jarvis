@@ -36,20 +36,21 @@
             width: 160px;
             height: 160px;
             border-radius: 50%;
-            background: radial-gradient(circle, #00d2ff 0%, #3a7bd5 70%, transparent 100%);
-            box-shadow: 0 0 50px #00d2ff;
+            /* Centro mucho más brillante con blanco intenso (#ffffff) */
+            background: radial-gradient(circle, #ffffff 0%, #00d2ff 35%, #3a7bd5 75%, transparent 100%);
+            box-shadow: 0 0 60px #00d2ff, inset 0 0 15px #ffffff;
             animation: pulse 3s infinite ease-in-out;
             cursor: pointer;
             transition: all 0.3s ease;
         }
         .recording {
-            background: radial-gradient(circle, #ff0055 0%, #ff4b2b 70%, transparent 100%) !important;
-            box-shadow: 0 0 60px #ff0055 !important;
+            background: radial-gradient(circle, #ffffff 0%, #ff0055 40%, #ff4b2b 75%, transparent 100%) !important;
+            box-shadow: 0 0 70px #ff0055, inset 0 0 20px #ffffff !important;
             animation: pulse-fast 0.8s infinite ease-in-out !important;
         }
         .thinking {
-            background: radial-gradient(circle, #a855f7 0%, #6b21a8 70%, transparent 100%) !important;
-            box-shadow: 0 0 40px #a855f7 !important;
+            background: radial-gradient(circle, #ffffff 0%, #a855f7 40%, #6b21a8 75%, transparent 100%) !important;
+            box-shadow: 0 0 50px #a855f7, inset 0 0 15px #ffffff !important;
             animation: none !important;
             transform: scale(1) !important;
         }
@@ -93,8 +94,6 @@
         <div id="response-text"></div>
     </div>
 
-    <audio id="audioPlayer" style="display:none;"></audio>
-
     <script>
         const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/fxk2ibpvmut811i2fcg4yb56saasskfc"; 
 
@@ -115,11 +114,27 @@
         let isRecording = false;
         let mainRecognizer;
 
+        // Función para leer la respuesta usando la voz nativa del navegador
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Detener audios anteriores
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'es-ES';
+                utterance.rate = 1.0;
+                
+                utterance.onend = () => {
+                    document.getElementById('status').textContent = "Di 'Mara' para hablar y 'Please' para enviar.";
+                };
+
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
         function initMaraVoiceEngine() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             
             if (!SpeechRecognition) {
-                document.getElementById('status').textContent = "Navegador no compatible con voz.";
+                document.getElementById('status').textContent = "Navegador no compatible con reconocimiento de voz.";
                 return;
             }
 
@@ -131,11 +146,9 @@
             mainRecognizer.onresult = (event) => {
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     const transcript = event.results[i][0].transcript.toLowerCase().trim();
-                    console.log("Texto escuchado:", transcript);
 
                     if (!isRecording) {
                         if (transcript.includes("mara") || transcript.includes("oye mara")) {
-                            console.log("¡Activado!");
                             startAudioRecording();
                             break;
                         }
@@ -150,7 +163,6 @@
                         );
 
                         if (EnglishStop) {
-                            console.log("¡Cierre detectado!");
                             stopAudioRecording();
                             break;
                         }
@@ -213,24 +225,19 @@
                         });
 
                         if (response.ok) {
-                            // Procesar la respuesta directamente como audio binario (audio/mpeg)
-                            const responseAudioBlob = await response.blob();
-                            const audioUrl = URL.createObjectURL(responseAudioBlob);
-                            
+                            const data = await response.json();
+                            const answerText = data.text || "No recibí respuesta.";
+
                             status.textContent = "Mara respondiendo...";
+                            responseText.textContent = answerText;
 
-                            const player = document.getElementById('audioPlayer');
-                            player.src = audioUrl;
-                            player.play();
-
-                            player.onended = () => {
-                                status.textContent = "Di 'Mara' para hablar y 'Please' para enviar.";
-                            };
+                            // Hablar la respuesta recibida en JSON
+                            speakText(answerText);
                         } else {
-                            status.textContent = "Error al recibir respuesta de Make";
+                            status.textContent = "Error al recibir respuesta de Make.";
                         }
                     } catch (e) {
-                        status.textContent = "Error de conexión con Make";
+                        status.textContent = "Error de conexión con Make.";
                     } finally {
                         orb.className = "orb";
                         isRecording = false;
