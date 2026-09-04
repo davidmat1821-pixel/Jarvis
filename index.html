@@ -2,54 +2,69 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mara IA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mara IA - Tablet Edition</title>
     <style>
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
         body {
             background-color: #050508;
             color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             display: flex;
             flex-direction: column;
-            justify-content: space-around;
+            justify-content: space-between;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 2rem 1rem;
             overflow: hidden;
             user-select: none;
         }
+        .header-container {
+            text-align: center;
+            margin-top: 1rem;
+        }
         #clock {
-            font-size: 4rem;
+            font-size: clamp(3.5rem, 8vw, 6rem);
             font-weight: 300;
             color: #00d2ff;
-            text-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
-            text-align: center;
+            text-shadow: 0 0 25px rgba(0, 210, 255, 0.6);
+            line-height: 1;
         }
         #date {
-            font-size: 1.2rem;
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
             color: #8a99ad;
-            text-align: center;
-            margin-top: 10px;
+            margin-top: 12px;
             text-transform: capitalize;
+            letter-spacing: 1px;
+        }
+        .orb-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
         }
         .orb {
-            width: 160px;
-            height: 160px;
+            width: clamp(180px, 30vw, 260px);
+            height: clamp(180px, 30vw, 260px);
             border-radius: 50%;
             background: radial-gradient(circle, #ffffff 0%, #00d2ff 35%, #3a7bd5 75%, transparent 100%);
-            box-shadow: 0 0 60px #00d2ff, inset 0 0 15px #ffffff;
+            box-shadow: 0 0 70px #00d2ff, inset 0 0 20px #ffffff;
             animation: pulse 3s infinite ease-in-out;
             cursor: pointer;
             transition: all 0.3s ease;
         }
         .recording {
             background: radial-gradient(circle, #ffffff 0%, #ff0055 40%, #ff4b2b 75%, transparent 100%) !important;
-            box-shadow: 0 0 70px #ff0055, inset 0 0 20px #ffffff !important;
+            box-shadow: 0 0 80px #ff0055, inset 0 0 25px #ffffff !important;
             animation: pulse-fast 0.8s infinite ease-in-out !important;
         }
         .thinking {
             background: radial-gradient(circle, #ffffff 0%, #a855f7 40%, #6b21a8 75%, transparent 100%) !important;
-            box-shadow: 0 0 50px #a855f7, inset 0 0 15px #ffffff !important;
+            box-shadow: 0 0 60px #a855f7, inset 0 0 20px #ffffff !important;
             animation: none !important;
             transform: scale(1) !important;
         }
@@ -63,47 +78,63 @@
             50% { transform: scale(1.1); }
             100% { transform: scale(0.92); }
         }
-        #status {
-            font-size: 1.2rem;
-            color: #a0aec0;
+        .footer-container {
             text-align: center;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 1.5rem;
+            padding: 0 1rem;
+        }
+        #status {
+            font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+            color: #a0aec0;
             min-height: 1.5em;
+            font-weight: 400;
         }
         #response-text {
-            font-size: 1.1rem;
+            font-size: clamp(1.1rem, 2.8vw, 1.4rem);
             color: #e2e8f0;
-            text-align: center;
-            max-width: 80%;
-            margin-top: 10px;
+            margin-top: 12px;
             min-height: 2em;
+            line-height: 1.4;
         }
     </style>
 </head>
 <body>
 
-    <div>
+    <div class="header-container">
         <div id="clock">00:00</div>
         <div id="date">Cargando fecha...</div>
     </div>
 
-    <div id="orb" class="orb"></div>
+    <div class="orb-container">
+        <div id="orb" class="orb"></div>
+    </div>
 
-    <div style="text-align: center;">
-        <div id="status">Haz un clic inicial en la pantalla para activar...</div>
+    <div class="footer-container">
+        <div id="status">Toca la pantalla para activar a Mara...</div>
         <div id="response-text"></div>
     </div>
 
     <script>
         const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/fxk2ibpvmut811i2fcg4yb56saasskfc"; 
 
+        function getMexicoTimeString() {
+            const now = new Date();
+            return now.toLocaleTimeString('es-MX', { 
+                timeZone: 'America/Mexico_City', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+            });
+        }
+
         function updateClock() {
             const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('clock').textContent = `${hours}:${minutes}`;
+            document.getElementById('clock').textContent = getMexicoTimeString();
             
-            const options = { weekday: 'long', month: 'long', day: 'numeric' };
-            document.getElementById('date').textContent = now.toLocaleDateString('es-ES', options);
+            const options = { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/Mexico_City' };
+            document.getElementById('date').textContent = now.toLocaleDateString('es-MX', options);
         }
         setInterval(updateClock, 1000);
         updateClock();
@@ -112,16 +143,48 @@
         let audioChunks = [];
         let isRecording = false;
         let mainRecognizer;
+        let selectedVoice = null;
+
+        let audioContext;
+        let analyser;
+        let microphone;
+        let silenceTimer = null;
+        let animFrameId = null;
+
+        function loadFemaleVoice() {
+            if ('speechSynthesis' in window) {
+                const voices = window.speechSynthesis.getVoices();
+                selectedVoice = voices.find(v => v.lang.includes('es') && (
+                    v.name.includes('Paulina') || 
+                    v.name.includes('Monica') || 
+                    v.name.includes('Sabina') || 
+                    v.name.includes('Helena') || 
+                    v.name.includes('Lucia') ||
+                    v.name.includes('Google español') ||
+                    v.name.toLowerCase().includes('female')
+                )) || voices.find(v => v.lang.includes('es'));
+            }
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = loadFemaleVoice;
+            loadFemaleVoice();
+        }
 
         function speakText(text) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'es-ES';
+                utterance.lang = 'es-MX';
                 utterance.rate = 1.0;
+                utterance.pitch = 1.1;
+                
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
                 
                 utterance.onend = () => {
-                    document.getElementById('status').textContent = "Di 'Mara' para hablar y 'Please' para enviar.";
+                    document.getElementById('status').textContent = "Di 'Mara' para hablar.";
                 };
 
                 window.speechSynthesis.speak(utterance);
@@ -132,14 +195,14 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             
             if (!SpeechRecognition) {
-                document.getElementById('status').textContent = "Navegador no compatible con reconocimiento de voz.";
+                document.getElementById('status').textContent = "Navegador no compatible.";
                 return;
             }
 
             mainRecognizer = new SpeechRecognition();
             mainRecognizer.continuous = true;
             mainRecognizer.interimResults = true;
-            mainRecognizer.lang = 'es-ES';
+            mainRecognizer.lang = 'es-MX';
 
             mainRecognizer.onresult = (event) => {
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -148,20 +211,6 @@
                     if (!isRecording) {
                         if (transcript.includes("mara") || transcript.includes("oye mara")) {
                             startAudioRecording();
-                            break;
-                        }
-                    } else {
-                        const EnglishStop = (
-                            transcript.endsWith("please") || 
-                            transcript.endsWith("pless") || 
-                            transcript.endsWith("ples") || 
-                            transcript.endsWith("pleas") ||
-                            transcript.includes(" please ") ||
-                            transcript.includes(" pless ")
-                        );
-
-                        if (EnglishStop) {
-                            stopAudioRecording();
                             break;
                         }
                     }
@@ -174,10 +223,44 @@
 
             try {
                 mainRecognizer.start();
-                document.getElementById('status').textContent = "Di 'Mara' para hablar y 'Please' para enviar.";
+                document.getElementById('status').textContent = "Di 'Mara' para hablar.";
             } catch(e) {
-                console.error("Error al iniciar motor de voz:", e);
+                console.error("Error motor voz:", e);
             }
+        }
+
+        function monitorSilence() {
+            const bufferLength = analyser.fftSize;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function checkVolume() {
+                if (!isRecording) return;
+                
+                analyser.getByteTimeDomainData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    const amplitude = (dataArray[i] - 128) / 128;
+                    sum += amplitude * amplitude;
+                }
+                const rms = Math.sqrt(sum / bufferLength);
+
+                if (rms < 0.05) { 
+                    if (!silenceTimer) {
+                        silenceTimer = setTimeout(() => {
+                            stopAudioRecording();
+                        }, 2000);
+                    }
+                } else {
+                    if (silenceTimer) {
+                        clearTimeout(silenceTimer);
+                        silenceTimer = null;
+                    }
+                }
+
+                animFrameId = requestAnimationFrame(checkVolume);
+            }
+
+            checkVolume();
         }
 
         async function startAudioRecording() {
@@ -189,7 +272,7 @@
             const responseText = document.getElementById('response-text');
 
             orb.className = "orb recording";
-            status.textContent = "Te escucho... di 'Please' al terminar.";
+            status.textContent = "Te escucho...";
             responseText.textContent = "";
 
             try {
@@ -201,6 +284,12 @@
                     } 
                 });
 
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
 
@@ -209,12 +298,17 @@
                 };
 
                 mediaRecorder.onstop = async () => {
+                    if (silenceTimer) clearTimeout(silenceTimer);
+                    if (animFrameId) cancelAnimationFrame(animFrameId);
+                    if (audioContext) audioContext.close();
+
                     orb.className = "orb thinking";
                     status.textContent = "Mara está pensando...";
 
                     const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                     const formData = new FormData();
                     formData.append("file", audioBlob, "audio.wav");
+                    formData.append("time_mexico", getMexicoTimeString());
 
                     try {
                         const response = await fetch(MAKE_WEBHOOK_URL, {
@@ -249,9 +343,10 @@
                 };
 
                 mediaRecorder.start();
+                monitorSilence();
 
             } catch (err) {
-                console.error("Error al acceder al micrófono:", err);
+                console.error("Error micrófono:", err);
                 isRecording = false;
                 orb.className = "orb";
             }
@@ -265,6 +360,7 @@
         }
 
         window.addEventListener('load', () => {
+            loadFemaleVoice();
             document.body.addEventListener('click', function unlockAudio() {
                 initMaraVoiceEngine();
                 document.body.removeEventListener('click', unlockAudio);
